@@ -13,15 +13,29 @@ Reprodukowalny obraz Docker z bazą danych MongoDB odtwarzaną automatycznie z n
 - `JobLog`
 - `ManualControl`
 
-## Uruchomienie przez Docker Compose (zalecane)
+## Uruchomienie i inicjalizacja
 
-Z katalogu głównego repozytorium:
+Przy pierwszym uruchomieniu (pusty wolumen `mongodb_data`) skrypt `/docker-entrypoint-initdb.d/01-restore-latest.sh` automatycznie odtworzy bazę z najnowszego archiwum z katalogu `db/backups/`.
+
+### macOS / Linux (bash)
 
 ```bash
 docker compose up -d --build
 ```
 
-Przy pierwszym uruchomieniu (pusty wolumen `mongodb_data`) skrypt `/docker-entrypoint-initdb.d/01-restore-latest.sh` automatycznie odtworzy bazę z najnowszego archiwum z katalogu `db/backups/`.
+### Windows (PowerShell)
+
+```powershell
+# Uruchomienie i weryfikacja gotowości bazy
+.\db\scripts\init.ps1
+
+# Reset bazy do stanu z najnowszego dumpa (usuwa wolumen i startuje od zera)
+.\db\scripts\init.ps1 -Reset
+```
+
+> **Windows ExecutionPolicy:** Jeśli PowerShell blokuje uruchamianie skryptów `.ps1`, uruchom jednorazowo:
+> `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
+> lub wywołuj skrypty przez `powershell -ExecutionPolicy Bypass -File .\db\scripts\init.ps1`.
 
 Domyślne dane połączenia (można nadpisać zmiennymi środowiskowymi lub plikiem `.env`):
 
@@ -49,35 +63,66 @@ docker run -d --name fup-mongodb -p 27017:27017 field-under-pressure-mongodb
 
 Cała baza `field_under_pressure` (wszystkie kolekcje, dokumenty, indeksy i walidatory) jest eksportowana do archiwum z timestampem: `db/backups/field_under_pressure_YYYYMMDD_HHMMSS.archive.gz`.
 
-### 1. Eksport bazy do archiwum (`backup.sh`)
+### 1. Eksport bazy do archiwum (`backup`)
 
+**macOS / Linux (bash):**
 ```bash
-# Zrzut całej bazy field_under_pressure do db/backups/field_under_pressure_YYYYMMDD_HHMMSS.archive.gz
+# Zrzut całej bazy do db/backups/field_under_pressure_YYYYMMDD_HHMMSS.archive.gz
 ./db/scripts/backup.sh
 
 # Opcjonalnie: zapis do własnej ścieżki
 ./db/scripts/backup.sh path/to/custom.archive.gz
 ```
 
+**Windows (PowerShell):**
+```powershell
+# Zrzut całej bazy do db\backups\field_under_pressure_YYYYMMDD_HHMMSS.archive.gz
+.\db\scripts\backup.ps1
+
+# Opcjonalnie: zapis do własnej ścieżki
+.\db\scripts\backup.ps1 .\custom.archive.gz
+```
+
 Wygenerowane archiwum można scommitować do repozytorium lub przekazać bezpośrednio innemu deweloperowi.
 
-### 2. Odtworzenie bazy z archiwum (`restore.sh`)
+### 2. Odtworzenie bazy z archiwum (`restore`)
 
+Bez podania ścieżki skrypt automatycznie wybiera **najnowsze** archiwum `field_under_pressure_*.archive.gz` z `db/backups/` i czyści lokalną bazę przed importem (1:1 z archiwum).
+
+**macOS / Linux (bash):**
 ```bash
-# Odtworzenie całej bazy 1:1 z najnowszego archiwum field_under_pressure_*.archive.gz w db/backups/
-# (domyślnie czyści lokalną bazę przed importem, aby stan był identyczny z archiwum)
+# Odtworzenie najnowszego archiwum 1:1
 ./db/scripts/restore.sh
 
-# Opcjonalnie: odtworzenie ze wskazanego archiwum lub bez czyszczenia lokalnej bazy (--no-drop)
-./db/scripts/restore.sh db/backups/field_under_pressure_20261120_235500.archive.gz
+# Wskazane archiwum lub bez czyszczenia lokalnej bazy (--no-drop)
+./db/scripts/restore.sh db/backups/field_under_pressure_20261120_235405.archive.gz
 ./db/scripts/restore.sh --no-drop
 ```
 
-Oba skrypty działają również z zewnętrzną instancją MongoDB po ustawieniu `MONGO_URI` (wymagają wtedy lokalnego `mongodump`/`mongorestore`):
+**Windows (PowerShell):**
+```powershell
+# Odtworzenie najnowszego archiwum 1:1
+.\db\scripts\restore.ps1
+
+# Wskazane archiwum lub bez czyszczenia lokalnej bazy (-NoDrop)
+.\db\scripts\restore.ps1 .\db\backups\field_under_pressure_20261120_235405.archive.gz
+.\db\scripts\restore.ps1 -NoDrop
+```
+
+### Zewnętrzna instancja MongoDB (`MONGO_URI`)
+
+Oba skrypty działają także z dowolnym `MONGO_URI` (wymagają wtedy lokalnego `mongodump`/`mongorestore`):
 
 ```bash
+# macOS / Linux
 MONGO_URI="mongodb://admin:admin123@localhost:27017/?authSource=admin" ./db/scripts/backup.sh
 MONGO_URI="mongodb://admin:admin123@localhost:27017/?authSource=admin" ./db/scripts/restore.sh
+```
+
+```powershell
+# Windows (PowerShell)
+$env:MONGO_URI="mongodb://admin:admin123@localhost:27017/?authSource=admin"; .\db\scripts\backup.ps1
+$env:MONGO_URI="mongodb://admin:admin123@localhost:27017/?authSource=admin"; .\db\scripts\restore.ps1
 ```
 
 ## Weryfikacja kolekcji
@@ -91,6 +136,11 @@ docker compose exec mongodb mongosh \
 ## Reset bazy do stanu z najnowszego dumpa
 
 ```bash
-docker compose down -v
-docker compose up -d --build
+# macOS / Linux
+docker compose down -v && docker compose up -d --build
+```
+
+```powershell
+# Windows (PowerShell)
+.\db\scripts\init.ps1 -Reset
 ```

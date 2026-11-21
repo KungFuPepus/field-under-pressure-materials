@@ -1,0 +1,10 @@
+# Ensure shell scripts keep LF line endings on Windows checkouts (required inside Linux Docker container)
+*.sh text eol=lf
+
+# PowerShell scripts use CRLF on Windows
+*.ps1 text eol=crlf
+
+# Prevent Git from modifying binary MongoDB archive dumps
+*.archive binary
+*.archive.gz binary
+*.gz binary

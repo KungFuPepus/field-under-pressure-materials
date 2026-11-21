@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+export MSYS_NO_PATHCONV=1
 
 # Export the entire project database (all collections, documents, indexes, and validators)
 # into a single compressed archive (.archive.gz) for sharing between developers.

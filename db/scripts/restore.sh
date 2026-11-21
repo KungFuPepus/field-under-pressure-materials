@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+export MSYS_NO_PATHCONV=1
 
 # Restore the entire project database (all collections, documents, indexes, and validators)
 # from a shared compressed archive (.archive.gz).

@@ -9,4 +9,8 @@ ENV MONGO_INITDB_DATABASE=field_under_pressure
 COPY backups/ /backups/
 COPY scripts/init-restore.sh /docker-entrypoint-initdb.d/01-restore-latest.sh
 
+# Normalize line endings (Windows CRLF -> LF) and ensure executable bit
+RUN sed -i 's/\r$//' /docker-entrypoint-initdb.d/01-restore-latest.sh && \
+    chmod +x /docker-entrypoint-initdb.d/01-restore-latest.sh
+
 EXPOSE 27017
